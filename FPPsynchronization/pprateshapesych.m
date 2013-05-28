@@ -1,4 +1,4 @@
-function [t Vout comp_time]=pprateshapesych(c,N,groups,neuron_synch_number)
+function [t Vout PP comp_time]=pprateshapesych(c,N,groups,neuron_synch_number)
 %function [t Vout]=pprateshapesych simulates a patient microelectrode recording
 %using a filtered point process with spikes emergant from synchronisation. 
 %This is simulation is based on pprateshape, but extends it by adding in
@@ -7,6 +7,7 @@ function [t Vout comp_time]=pprateshapesych(c,N,groups,neuron_synch_number)
 
 tic
 start_cpu_time=cputime;
+write_file = 1;
 
 h=waitbar(0,'Simulation Progress');
 
@@ -35,20 +36,20 @@ end
 
 rate=10;                        %spike rate
 lambda=1/rate*gamma(1+1/c);     %calculate scale parameter based on rate and shape
-tmax=2;                         %simulation time length
+tmax=0.25;                         %simulation time length
 dt=1/24000;                     %time step size
 t=0:dt:tmax;                    %create simulation time vector
 
-synchrate=20;                   %synchrony rate
+synchrate=10;                   %synchrony rate
 synch_times=zeros(groups,synchrate);
 synch_group=zeros(groups,neuron_synch_number);
 for i=1:groups
-    synch_times(i,:)=(tmax*rand(1,synchrate));      %randomly generates 100 synch firing times
+    synch_times(i,:)=(tmax*rand(1,synchrate));      %randomly generates synch firing times
     synch_group(i,:)=round(rand(1,neuron_synch_number)*N);  
 end
 
 %% Create AP waveform
-It=sin(4000*2*pi*(0:1/24000:30/24000)).*exp(-24000*(0:1/24000:30/24000));%dlmread('apcurrent24k.dat');        %Read in current waveform of action potential
+It=dlmread('apcurrent24k.dat');        %Read in current waveform of action potential sin(4000*2*pi*(0:1/24000:30/24000)).*exp(-24000*(0:1/24000:30/24000));%
 It=-It./min(It).*250e-9;               %normalize
 length_curr=length(It)-1;
 epsilon=8.85e-12;                      %Permitivity of free space
@@ -71,7 +72,7 @@ t_impulse=0:1/24000:100/24000;
 %prepare voltage and PP storage vector
 Vt=zeros(length(t),1).';
 Z=Vt;
-PP8=Z;
+PP=zeros(N,length(t));
 
 fprintf('simulation initialization complete\n')
 
@@ -85,7 +86,7 @@ for neuron=1:N
     tk=zeros(1,ceil(rate.*max(t)));
     
     %randomly create isi distribution
-    isiNonShifted=randraw('weibull',[0,c,lambda],[1,5.*rate.*round(max(t))]);
+    isiNonShifted=randraw('weibull',[0,c,lambda],[1,5.*rate.*ceil(max(t))]);
     shift_amount=round(rand*length(isiNonShifted));
     isiShifted=circshift(isiNonShifted,shift_amount);
     shift_amount=round(rand*length(isiShifted));
@@ -139,26 +140,27 @@ for neuron=1:N
         pp(wave_start)=1;
         ppwave(wave_start:wave_end)=ppwave(wave_start:wave_end)+It;
     end
- 
+    
+    PP(neuron,:)=pp;
     R2=R2N(neuron);
     
     extracellular_impulse_response=-(R4*exp(-(t_impulse*(C2*R1*R2 + C2*R1*R3 + C2*R1*R4 - C3*R1*R3 + C3*R2*R3 + C3*R3*R4))/(2*C2*C3*R1*R3*(R2 + R4))).*(cosh((t_impulse*(C2^2*R1^2*R2^2 + 2*C2^2*R1^2*R2*R3 + 2*C2^2*R1^2*R2*R4 + C2^2*R1^2*R3^2 + 2*C2^2*R1^2*R3*R4 + C2^2*R1^2*R4^2 + 2*C2*C3*R1^2*R2*R3 - 2*C2*C3*R1^2*R3^2 + 2*C2*C3*R1^2*R3*R4 - 2*C2*C3*R1*R2^2*R3 - 2*C2*C3*R1*R2*R3^2 - 4*C2*C3*R1*R2*R3*R4 - 2*C2*C3*R1*R3^2*R4 - 2*C2*C3*R1*R3*R4^2 + C3^2*R1^2*R3^2 - 2*C3^2*R1*R2*R3^2 - 2*C3^2*R1*R3^2*R4 + C3^2*R2^2*R3^2 + 2*C3^2*R2*R3^2*R4 + C3^2*R3^2*R4^2)^(1/2))/(2*C2*C3*R1*R3*(R2 + R4))) + (sinh((t_impulse*(C2^2*R1^2*R2^2 + 2*C2^2*R1^2*R2*R3 + 2*C2^2*R1^2*R2*R4 + C2^2*R1^2*R3^2 + 2*C2^2*R1^2*R3*R4 + C2^2*R1^2*R4^2 + 2*C2*C3*R1^2*R2*R3 - 2*C2*C3*R1^2*R3^2 + 2*C2*C3*R1^2*R3*R4 - 2*C2*C3*R1*R2^2*R3 - 2*C2*C3*R1*R2*R3^2 - 4*C2*C3*R1*R2*R3*R4 - 2*C2*C3*R1*R3^2*R4 - 2*C2*C3*R1*R3*R4^2 + C3^2*R1^2*R3^2 - 2*C3^2*R1*R2*R3^2 - 2*C3^2*R1*R3^2*R4 + C3^2*R2^2*R3^2 + 2*C3^2*R2*R3^2*R4 + C3^2*R3^2*R4^2)^(1/2))/(2*C2*C3*R1*R3*(R2 + R4)))*(C2*R1*R2 - C2*R1*R3 + C2*R1*R4 + C3*R1*R3 - C3*R2*R3 - C3*R3*R4))/(C2^2*R1^2*R2^2 + 2*C2^2*R1^2*R2*R3 + 2*C2^2*R1^2*R2*R4 + C2^2*R1^2*R3^2 + 2*C2^2*R1^2*R3*R4 + C2^2*R1^2*R4^2 + 2*C2*C3*R1^2*R2*R3 - 2*C2*C3*R1^2*R3^2 + 2*C2*C3*R1^2*R3*R4 - 2*C2*C3*R1*R2^2*R3 - 2*C2*C3*R1*R2*R3^2 - 4*C2*C3*R1*R2*R3*R4 - 2*C2*C3*R1*R3^2*R4 - 2*C2*C3*R1*R3*R4^2 + C3^2*R1^2*R3^2 - 2*C3^2*R1*R2*R3^2 - 2*C3^2*R1*R3^2*R4 + C3^2*R2^2*R3^2 + 2*C3^2*R2*R3^2*R4 + C3^2*R3^2*R4^2)^(1/2)))/(C2*(R2 + R4));
     electrode_ppwave=conv(ppwave,extracellular_impulse_response,'same');
     
-    if neuron<64
-        PP8=PP8+2^(63-neuron)*pp;
-    end
-
     %convolve delta spikes with action potential to create a voltage spike
     %train, then add to previous neuron voltage spike trains
     %Vw=Vw+weight(neuron).*dt.*fft([It, zeros(1,length(pp)-length(It))]).*fft(pp);
     Vt=Vt+electrode_ppwave;
     
-    if ~mod(neuron,200)
+    if ~mod(neuron,1000)
         fprintf('neurons calculated: %i\n',neuron);
         fprintf('time elapsed: %d\n',cputime-start_cpu_time);
-        
     end
+    
+    
+
+  
+    
 end
 
 close(h)
@@ -187,11 +189,16 @@ Vf=filter(b,a,Vf);
 R=1e6;
 kB=1.38e-23;
 T=37+273;
-Nstd=4.*kB.*T.*R.*0;
+Nstd=4.*kB.*T.*R.*500000000000;
 Ntherm=Nstd.*randn(size(t));
 
 %add random noise
 Vout=Vf+Ntherm;
+
+% if write_file
+%     writeMERsimulation(N,'weibull',0,c,lambda,Vout,PP,'whitenoise',num2str(Nstd),1,N);
+%     fprintf('simulation written to file ppsim%s.dat\nTotal run time: %d\n',1,cputime-start_cpu_time)
+% end
 
 comp_time=toc;
 

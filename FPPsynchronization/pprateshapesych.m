@@ -36,16 +36,19 @@ end
 
 rate=10;                        %spike rate
 lambda=1/rate*gamma(1+1/c);     %calculate scale parameter based on rate and shape
-tmax=0.25;                         %simulation time length
+tmax=2;                         %simulation time length
 dt=1/24000;                     %time step size
 t=0:dt:tmax;                    %create simulation time vector
 
 synchrate=10;                   %synchrony rate
 synch_times=zeros(groups,synchrate);
 synch_group=zeros(groups,neuron_synch_number);
+
+local_groups=[800 1500 2500 4000 7000 10000];
+start_groups=[0 500 1000 2000 3000 5000];
 for i=1:groups
     synch_times(i,:)=(tmax*rand(1,synchrate));      %randomly generates synch firing times
-    synch_group(i,:)=round(rand(1,neuron_synch_number)*N);  
+    synch_group(i,:)=local_groups(i).*round(rand(1,neuron_synch_number))+start_groups(i);%round(((i-1)+rand(1,neuron_synch_number))*N/6);  
 end
 
 %% Create AP waveform
@@ -53,7 +56,8 @@ It=dlmread('apcurrent24k.dat');        %Read in current waveform of action poten
 It=-It./min(It).*250e-9;               %normalize
 length_curr=length(It)-1;
 epsilon=8.85e-12;                      %Permitivity of free space
-rho=10^5*10^6;                          %density of neurons in STN m^-3
+sigma=  4.8;                                %conductivity of white matter
+rho=10^4*10^6;                          %density of neurons in STN m^-3
 r=(3/4*N*rand(N,1)/(pi*rho)).^(1/3);   %create a power law distribution of neuron radii
 rsort=sort(r);
 
@@ -65,17 +69,19 @@ C2=9.38e-9;
 C3=1.56e-6;
 C2=9.38e-9;
 R4=100e6;
-R2N=1./(4*pi*epsilon*rsort(length(rsort):-1:1));
+R2N=1./(4*pi*sigma*rsort(length(rsort):-1:1));
 R1=2100;
 t_impulse=0:1/24000:100/24000;
 
 %prepare voltage and PP storage vector
 Vt=zeros(length(t),1).';
 Z=Vt;
-PP=zeros(N,length(t));
+PP=1;%zeros(N,length(t));
 
 fprintf('simulation initialization complete\n')
 
+
+% filt=0;
 
 %% Simulate each neuron as a filtered point process
 for neuron=1:N
@@ -101,6 +107,9 @@ for neuron=1:N
     %find then absolute time of each spike time
     if max(max(synch_group == neuron))           %neuron is in synchronized group
         for i=1:groups
+%             if i==1
+%                 filt=1;
+%             end
             if max(synch_group(i,:)==neuron)
                 spike_times_temp=sort(synch_times(i,:));
                 synch_number=1;
@@ -137,16 +146,27 @@ for neuron=1:N
     for i=1:tkindex-2
         wave_start=round(tk(i)/dt)+1;
         wave_end=wave_start+length_curr;
-        pp(wave_start)=1;
-        ppwave(wave_start:wave_end)=ppwave(wave_start:wave_end)+It;
+        pp(wave_start)=1; 
+%         if filt
+%             [b,a]=butter(8,0.01,'low');
+%             If=filter(b,a,It);
+%             ppwave(wave_start:wave_end)=ppwave(wave_start:wave_end)+If;   
+%         else
+            ppwave(wave_start:wave_end)=ppwave(wave_start:wave_end)+It;  
+%         end
     end
+   
+
     
-    PP(neuron,:)=pp;
+   
+    %PP(neuron,:)=pp;
     R2=R2N(neuron);
     
     extracellular_impulse_response=-(R4*exp(-(t_impulse*(C2*R1*R2 + C2*R1*R3 + C2*R1*R4 - C3*R1*R3 + C3*R2*R3 + C3*R3*R4))/(2*C2*C3*R1*R3*(R2 + R4))).*(cosh((t_impulse*(C2^2*R1^2*R2^2 + 2*C2^2*R1^2*R2*R3 + 2*C2^2*R1^2*R2*R4 + C2^2*R1^2*R3^2 + 2*C2^2*R1^2*R3*R4 + C2^2*R1^2*R4^2 + 2*C2*C3*R1^2*R2*R3 - 2*C2*C3*R1^2*R3^2 + 2*C2*C3*R1^2*R3*R4 - 2*C2*C3*R1*R2^2*R3 - 2*C2*C3*R1*R2*R3^2 - 4*C2*C3*R1*R2*R3*R4 - 2*C2*C3*R1*R3^2*R4 - 2*C2*C3*R1*R3*R4^2 + C3^2*R1^2*R3^2 - 2*C3^2*R1*R2*R3^2 - 2*C3^2*R1*R3^2*R4 + C3^2*R2^2*R3^2 + 2*C3^2*R2*R3^2*R4 + C3^2*R3^2*R4^2)^(1/2))/(2*C2*C3*R1*R3*(R2 + R4))) + (sinh((t_impulse*(C2^2*R1^2*R2^2 + 2*C2^2*R1^2*R2*R3 + 2*C2^2*R1^2*R2*R4 + C2^2*R1^2*R3^2 + 2*C2^2*R1^2*R3*R4 + C2^2*R1^2*R4^2 + 2*C2*C3*R1^2*R2*R3 - 2*C2*C3*R1^2*R3^2 + 2*C2*C3*R1^2*R3*R4 - 2*C2*C3*R1*R2^2*R3 - 2*C2*C3*R1*R2*R3^2 - 4*C2*C3*R1*R2*R3*R4 - 2*C2*C3*R1*R3^2*R4 - 2*C2*C3*R1*R3*R4^2 + C3^2*R1^2*R3^2 - 2*C3^2*R1*R2*R3^2 - 2*C3^2*R1*R3^2*R4 + C3^2*R2^2*R3^2 + 2*C3^2*R2*R3^2*R4 + C3^2*R3^2*R4^2)^(1/2))/(2*C2*C3*R1*R3*(R2 + R4)))*(C2*R1*R2 - C2*R1*R3 + C2*R1*R4 + C3*R1*R3 - C3*R2*R3 - C3*R3*R4))/(C2^2*R1^2*R2^2 + 2*C2^2*R1^2*R2*R3 + 2*C2^2*R1^2*R2*R4 + C2^2*R1^2*R3^2 + 2*C2^2*R1^2*R3*R4 + C2^2*R1^2*R4^2 + 2*C2*C3*R1^2*R2*R3 - 2*C2*C3*R1^2*R3^2 + 2*C2*C3*R1^2*R3*R4 - 2*C2*C3*R1*R2^2*R3 - 2*C2*C3*R1*R2*R3^2 - 4*C2*C3*R1*R2*R3*R4 - 2*C2*C3*R1*R3^2*R4 - 2*C2*C3*R1*R3*R4^2 + C3^2*R1^2*R3^2 - 2*C3^2*R1*R2*R3^2 - 2*C3^2*R1*R3^2*R4 + C3^2*R2^2*R3^2 + 2*C3^2*R2*R3^2*R4 + C3^2*R3^2*R4^2)^(1/2)))/(C2*(R2 + R4));
+        
     electrode_ppwave=conv(ppwave,extracellular_impulse_response,'same');
     
+
     %convolve delta spikes with action potential to create a voltage spike
     %train, then add to previous neuron voltage spike trains
     %Vw=Vw+weight(neuron).*dt.*fft([It, zeros(1,length(pp)-length(It))]).*fft(pp);
@@ -158,7 +178,7 @@ for neuron=1:N
     end
     
     
-
+%     filt=0;
   
     
 end
@@ -180,20 +200,20 @@ flow=5000;
 fhigh=500;
 
 %apply phase preserving filters to signal
-[b,a]=butter(9,flow/24000,'low');
-Vf=filter(b,a,Vt);
-[b,a]=butter(2,fhigh/24000,'high');
-Vf=filter(b,a,Vf);
+% [b,a]=butter(9,flow/24000,'low');
+% Vf=filter(b,a,Vt);
+% [b,a]=butter(2,fhigh/24000,'high');
+% Vf=filter(b,a,Vf);
 
 %set electrode parameters to calculate random noise
 R=1e6;
 kB=1.38e-23;
 T=37+273;
-Nstd=4.*kB.*T.*R.*500000000000;
+Nstd=4.*kB.*T.*R.*0;
 Ntherm=Nstd.*randn(size(t));
 
 %add random noise
-Vout=Vf+Ntherm;
+Vout=Vt+Ntherm;
 
 % if write_file
 %     writeMERsimulation(N,'weibull',0,c,lambda,Vout,PP,'whitenoise',num2str(Nstd),1,N);

@@ -44,11 +44,11 @@ synchrate=10;                   %synchrony rate
 synch_times=zeros(groups,synchrate);
 synch_group=zeros(groups,neuron_synch_number);
 
-local_groups=[800 1500 2500 4000 7000 10000];
-start_groups=[0 500 1000 2000 3000 5000];
+%local_groups=[800 1500 2500 4000 7000 10000];
+%start_groups=[0 500 1000 2000 3000 5000];
 for i=1:groups
     synch_times(i,:)=(tmax*rand(1,synchrate));      %randomly generates synch firing times
-    synch_group(i,:)=local_groups(i).*round(rand(1,neuron_synch_number))+start_groups(i);%round(((i-1)+rand(1,neuron_synch_number))*N/6);  
+    synch_group(i,:)=round(rand(1,neuron_synch_number)*N);%local_groups(i).*round(rand(1,neuron_synch_number))+start_groups(i);%round(((i-1)+rand(1,neuron_synch_number))*N/6);  
 end
 
 %% Create AP waveform
@@ -75,8 +75,7 @@ t_impulse=0:1/24000:100/24000;
 
 %prepare voltage and PP storage vector
 Vt=zeros(length(t),1).';
-Z=Vt;
-PP=1;%zeros(N,length(t));
+PP=zeros(N,length(t));
 
 fprintf('simulation initialization complete\n')
 
@@ -159,7 +158,7 @@ for neuron=1:N
 
     
    
-    %PP(neuron,:)=pp;
+    PP(neuron,:)=pp;
     R2=R2N(neuron);
     
     extracellular_impulse_response=-(R4*exp(-(t_impulse*(C2*R1*R2 + C2*R1*R3 + C2*R1*R4 - C3*R1*R3 + C3*R2*R3 + C3*R3*R4))/(2*C2*C3*R1*R3*(R2 + R4))).*(cosh((t_impulse*(C2^2*R1^2*R2^2 + 2*C2^2*R1^2*R2*R3 + 2*C2^2*R1^2*R2*R4 + C2^2*R1^2*R3^2 + 2*C2^2*R1^2*R3*R4 + C2^2*R1^2*R4^2 + 2*C2*C3*R1^2*R2*R3 - 2*C2*C3*R1^2*R3^2 + 2*C2*C3*R1^2*R3*R4 - 2*C2*C3*R1*R2^2*R3 - 2*C2*C3*R1*R2*R3^2 - 4*C2*C3*R1*R2*R3*R4 - 2*C2*C3*R1*R3^2*R4 - 2*C2*C3*R1*R3*R4^2 + C3^2*R1^2*R3^2 - 2*C3^2*R1*R2*R3^2 - 2*C3^2*R1*R3^2*R4 + C3^2*R2^2*R3^2 + 2*C3^2*R2*R3^2*R4 + C3^2*R3^2*R4^2)^(1/2))/(2*C2*C3*R1*R3*(R2 + R4))) + (sinh((t_impulse*(C2^2*R1^2*R2^2 + 2*C2^2*R1^2*R2*R3 + 2*C2^2*R1^2*R2*R4 + C2^2*R1^2*R3^2 + 2*C2^2*R1^2*R3*R4 + C2^2*R1^2*R4^2 + 2*C2*C3*R1^2*R2*R3 - 2*C2*C3*R1^2*R3^2 + 2*C2*C3*R1^2*R3*R4 - 2*C2*C3*R1*R2^2*R3 - 2*C2*C3*R1*R2*R3^2 - 4*C2*C3*R1*R2*R3*R4 - 2*C2*C3*R1*R3^2*R4 - 2*C2*C3*R1*R3*R4^2 + C3^2*R1^2*R3^2 - 2*C3^2*R1*R2*R3^2 - 2*C3^2*R1*R3^2*R4 + C3^2*R2^2*R3^2 + 2*C3^2*R2*R3^2*R4 + C3^2*R3^2*R4^2)^(1/2))/(2*C2*C3*R1*R3*(R2 + R4)))*(C2*R1*R2 - C2*R1*R3 + C2*R1*R4 + C3*R1*R3 - C3*R2*R3 - C3*R3*R4))/(C2^2*R1^2*R2^2 + 2*C2^2*R1^2*R2*R3 + 2*C2^2*R1^2*R2*R4 + C2^2*R1^2*R3^2 + 2*C2^2*R1^2*R3*R4 + C2^2*R1^2*R4^2 + 2*C2*C3*R1^2*R2*R3 - 2*C2*C3*R1^2*R3^2 + 2*C2*C3*R1^2*R3*R4 - 2*C2*C3*R1*R2^2*R3 - 2*C2*C3*R1*R2*R3^2 - 4*C2*C3*R1*R2*R3*R4 - 2*C2*C3*R1*R3^2*R4 - 2*C2*C3*R1*R3*R4^2 + C3^2*R1^2*R3^2 - 2*C3^2*R1*R2*R3^2 - 2*C3^2*R1*R3^2*R4 + C3^2*R2^2*R3^2 + 2*C3^2*R2*R3^2*R4 + C3^2*R3^2*R4^2)^(1/2)))/(C2*(R2 + R4));

@@ -65,7 +65,7 @@ end
 
  set(gca,'box','on','fontsize',16)%,'OuterPosition',[0 0 1 0.5])
  ylabel('Voltage(mV)','fontsize',16)%,'Position',[3.99 0 17.3])
- 
+ xlabel('Time(s)')
 %  subplot(3,1,3)
 %  plot(patient_time,patient_signal,'g');
 % xlim([0 1000])

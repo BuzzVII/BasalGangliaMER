@@ -42,7 +42,7 @@ end
 rate=30;                        %spike rate
 %c=100;                         %weibull shape parameter
 lambda=1/rate*gamma(1+1/c);     %calculate scale parameter based on rate and shape
-tmax=20;                        %simulation time length
+tmax=1;                         %simulation time length
 dt=1/24000;                     %time step size
 t=0:dt:tmax;                    %create simulation time vector
 
@@ -152,9 +152,10 @@ for neuron=1:N
     end
     
     
-%     shift_amount=round(rand*length(ppwave));
-%     ppwave=circshift(ppwave,shift_amount);
-%     pp=circshift(ppwave,shift_amount);
+    shift_amount=round(rand*length(ppwave));
+    ppwave=circshift(ppwave,shift_amount);
+    shift_amount=round(rand*length(ppwave));
+    pp=circshift(ppwave,shift_amount);
     
     R2=R2N(neuron);
     

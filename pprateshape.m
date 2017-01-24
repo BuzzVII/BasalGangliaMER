@@ -1,4 +1,4 @@
-function [t Vout comp_time]=pprateshape(c,N,synchronization,fix_stim)
+function [t, Vout, PP8]=pprateshape(rmax1,rmax2,N,synchronization,fix_stim)
 %function [t Vout]=pprateshape simulates a patient microelectrode recording
 %using a filtered point process. This is done by simulating N neuron spike 
 %times and then applying extracellular filtering to create the effective
@@ -15,10 +15,10 @@ if (nargin == 1 || N<1)
     N=10000;                    %Total number of neurons
 end
 
-if nargin == 2
+if nargin == 3
     synchronization=0;          %determines if any neurons have coupled firing times
     fix_stim=0;
-elseif nargin == 3
+elseif nargin == 4
     fix_stim=0;
 end
 
@@ -39,12 +39,12 @@ if synchronization
     end
 end
 
-rate=30;                        %spike rate
-%c=100;                         %weibull shape parameter
-lambda=1/rate*gamma(1+1/c);     %calculate scale parameter based on rate and shape
-tmax=20;                        %simulation time length
-dt=1/24000;                     %time step size
-t=0:dt:tmax;                    %create simulation time vector
+rate=30;                       %spike rate
+c=1;                           %weibull shape parameter
+lambda=1/rate*gamma(1+1/c);    %calculate scale parameter based on rate and shape
+tmax=1;                        %simulation time length
+dt=1/24000;                    %time step size
+t=0:dt:tmax;                   %create simulation time vector
 
 
 %% Create AP waveform
@@ -52,15 +52,13 @@ It=dlmread('apcurrent24k.dat');        %Read in current waveform of action poten
 It=-It./min(It).*250e-9;               %normalize
 length_curr=length(It)-1;
 epsilon=8.85e-12;                      %Permitivity of free space
-rho=10^5*10^6;         	   	  	%density of neurons in STN m^-3
+rho=10^5*10^6;                         %density of neurons in STN m^-3
 r=(3/4*N*rand(N,1)/(pi*rho)).^(1/3);   %create a power law distribution of neuron radii
-rsort=sort(r);
+rsort=sort(r,1,'ascend');
+rsort(end) = rmax1; %set a neuron very close to the electrode
+rsort(end-1) = rmax2; %set a neuron very close to the electrode
 
-%weight=1./(4*pi*epsilon*rsort);          %current to voltage coefficient
-weight=ones(size(r));
 R3=0.96e3;
-C3=2.22e-6;
-C2=9.38e-9;
 C3=1.56e-6;
 C2=9.38e-9;
 R4=100e6;
@@ -68,23 +66,12 @@ R2N=1./(4*pi*epsilon*rsort(length(rsort):-1:1));
 R1=2100;
 t_impulse=0:1/24000:100/24000;
 
-
-% figure(22)
-% hist(r);
-%Zw=dlmread('Zwinterp.dat');            %Extracellular filter function
-%
-
 %prepare voltage and PP storage vector
 Vt=zeros(length(t),1).';
 Z=Vt;
 PP8=Z;
 
-
-
-
-
 fprintf('simulation initialization complete\n')    %initialization complete
-
 
 %% Simulate each neuron as a filtered point process
 for neuron=1:N
@@ -95,11 +82,11 @@ for neuron=1:N
     tk=zeros(1,ceil(rate.*max(t)));
     
     %randomly create isi distribution
-    isiNonShifted=randraw('weibull',[0,c,lambda],[1,5.*rate.*round(max(t))]);
+    isiNonShifted=randraw('weibull',[0,c,lambda],[1,5.*ceil(rate.*max(t))]);
     shift_amount=round(rand*length(isiNonShifted));
-    isiShifted=circshift(isiNonShifted,shift_amount);
+    isiShifted=circshift(isiNonShifted,[shift_amount,0]);
     shift_amount=round(rand*length(isiShifted));
-    isi=circshift(isiShifted,shift_amount);
+    isi=circshift(isiShifted,[shift_amount,0]);
     
     
     %randomly start the first neuron firing time
@@ -157,7 +144,7 @@ for neuron=1:N
 %     pp=circshift(ppwave,shift_amount);
     
     R2=R2N(neuron);
-    
+
     extracellular_impulse_response=-(R4*exp(-(t_impulse*(C2*R1*R2 + C2*R1*R3 + C2*R1*R4 - C3*R1*R3 + C3*R2*R3 + C3*R3*R4))/(2*C2*C3*R1*R3*(R2 + R4))).*(cosh((t_impulse*(C2^2*R1^2*R2^2 + 2*C2^2*R1^2*R2*R3 + 2*C2^2*R1^2*R2*R4 + C2^2*R1^2*R3^2 + 2*C2^2*R1^2*R3*R4 + C2^2*R1^2*R4^2 + 2*C2*C3*R1^2*R2*R3 - 2*C2*C3*R1^2*R3^2 + 2*C2*C3*R1^2*R3*R4 - 2*C2*C3*R1*R2^2*R3 - 2*C2*C3*R1*R2*R3^2 - 4*C2*C3*R1*R2*R3*R4 - 2*C2*C3*R1*R3^2*R4 - 2*C2*C3*R1*R3*R4^2 + C3^2*R1^2*R3^2 - 2*C3^2*R1*R2*R3^2 - 2*C3^2*R1*R3^2*R4 + C3^2*R2^2*R3^2 + 2*C3^2*R2*R3^2*R4 + C3^2*R3^2*R4^2)^(1/2))/(2*C2*C3*R1*R3*(R2 + R4))) + (sinh((t_impulse*(C2^2*R1^2*R2^2 + 2*C2^2*R1^2*R2*R3 + 2*C2^2*R1^2*R2*R4 + C2^2*R1^2*R3^2 + 2*C2^2*R1^2*R3*R4 + C2^2*R1^2*R4^2 + 2*C2*C3*R1^2*R2*R3 - 2*C2*C3*R1^2*R3^2 + 2*C2*C3*R1^2*R3*R4 - 2*C2*C3*R1*R2^2*R3 - 2*C2*C3*R1*R2*R3^2 - 4*C2*C3*R1*R2*R3*R4 - 2*C2*C3*R1*R3^2*R4 - 2*C2*C3*R1*R3*R4^2 + C3^2*R1^2*R3^2 - 2*C3^2*R1*R2*R3^2 - 2*C3^2*R1*R3^2*R4 + C3^2*R2^2*R3^2 + 2*C3^2*R2*R3^2*R4 + C3^2*R3^2*R4^2)^(1/2))/(2*C2*C3*R1*R3*(R2 + R4)))*(C2*R1*R2 - C2*R1*R3 + C2*R1*R4 + C3*R1*R3 - C3*R2*R3 - C3*R3*R4))/(C2^2*R1^2*R2^2 + 2*C2^2*R1^2*R2*R3 + 2*C2^2*R1^2*R2*R4 + C2^2*R1^2*R3^2 + 2*C2^2*R1^2*R3*R4 + C2^2*R1^2*R4^2 + 2*C2*C3*R1^2*R2*R3 - 2*C2*C3*R1^2*R3^2 + 2*C2*C3*R1^2*R3*R4 - 2*C2*C3*R1*R2^2*R3 - 2*C2*C3*R1*R2*R3^2 - 4*C2*C3*R1*R2*R3*R4 - 2*C2*C3*R1*R3^2*R4 - 2*C2*C3*R1*R3*R4^2 + C3^2*R1^2*R3^2 - 2*C3^2*R1*R2*R3^2 - 2*C3^2*R1*R3^2*R4 + C3^2*R2^2*R3^2 + 2*C3^2*R2*R3^2*R4 + C3^2*R3^2*R4^2)^(1/2)))/(C2*(R2 + R4));
     electrode_ppwave=conv(ppwave,extracellular_impulse_response,'same');
     
@@ -169,8 +156,8 @@ for neuron=1:N
     %train, then add to previous neuron voltage spike trains
     %Vw=Vw+weight(neuron).*dt.*fft([It, zeros(1,length(pp)-length(It))]).*fft(pp);
     Vt=Vt+electrode_ppwave;
-    
-    if ~mod(neuron,200)
+ 
+    if ~mod(neuron,1000)
         fprintf('neurons calculated: %i\n',neuron);
         fprintf('time elapsed: %d\n',cputime-start_cpu_time);
         
@@ -215,9 +202,9 @@ Vout=Vf+Ntherm;
 fprintf('simulation complete\n') %simulation complete
 
 
- Nid=length(dir('h:\Data\ppsim*'))+1;                         %Output file ID
+ Nid=length(dir('ppsim*'))+1;                         %Output file ID
 % %% Write simulation to data file
- writeMERsimulation(N,'weibull',0,c,lambda,Vout,PP8,'whitenoise',num2str(Nstd),Nid,N);
+ writeMERsimulation(N,'poisson',rmax1,rmax2,lambda,Vout,PP8,'whitenoise',num2str(Nstd),Nid,N);
 % 
  fprintf('simulation written to file ppsim%s.dat\nTotal run time: %d\n',num2str(Nid),cputime-start_cpu_time) %simulation written to file
 % 
@@ -227,4 +214,4 @@ fprintf('simulation complete\n') %simulation complete
 %xlabel('t (s)');ylabel('V (V)');title('MER simulation');
 %print -depsc MERvoltage
 
-comp_time=toc
+comp_time=toc;

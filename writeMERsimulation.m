@@ -5,7 +5,7 @@ function writeMERsimulation(N,Distribution,Distpara1, Distpara2, Distpara3,...
 %This function creates a file containing the pp data and the MER data as
 %binary data and adds the appropriate text header to identify the data.
 
-    filename=['h:\Data\synchronized\ppsim',num2str(Nid),'.dat'];
+    filename=['ppsim',num2str(Nid),'.dat'];
     fid=fopen(filename,'w');
     %Create header for MER parameters
     Header1=['date:',date,';',...       

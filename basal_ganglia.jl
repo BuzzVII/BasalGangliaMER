@@ -32,6 +32,31 @@ function sigmoid(v, vh, k, S_max)
   S = S_max/(1+exp(k*(vh - v)));
 end
 
+function bg_model_no_delay(t,u,du)
+  du[1] = u[2];
+  du[2] = (A_A*D_A + A_N*D_N)*C[5,1]*sigmoid(u[9], vh_STN, k_STN, S_STN) -
+          A_G*D_G*C[2,1]*sigmoid(u[3], vh_GPe, k_GPe, S_GPe) -
+          A_G*D_G*C[3,1]*sigmoid(u[5], vh_D1,  k_D1,  S_D1) -
+          2*(D_A+D_N-2*D_G)*u[2] - (D_A^2+D_N^2+2*D_G^2)*u[1];
+  du[3] = u[4];
+  du[4] = (A_A*D_A + A_N*D_N)*C[5,2]*sigmoid(u[9], vh_STN, k_STN, S_STN) -
+          A_G*D_G*C[4,2]*sigmoid(u[7], vh_D2,  k_D2,  S_D2) -
+          A_G*D_G*C[2,2]*sigmoid(u[3], vh_GPe, k_GPe, S_GPe) -
+          2*(D_A+D_N-2*D_G)*u[4] - (D_A^2+D_N^2+2*D_G^2)*u[3];
+  du[5] = u[6];
+  du[6] = (A_A*D_A + A_N*D_N)*C[6,3]*u[11] - 2*(D_A+D_N)*u[6] - (D_A^2+D_N^2)*u[5];
+  du[7] = u[8];
+  du[8] = (A_A*D_A + A_N*D_N)*C[6,4]*u[11] - 2*(D_A+D_N)*u[8] - (D_A^2+D_N^2)*u[7];
+  du[9] = u[10];
+  du[10] = (A_A*D_A + A_N*D_N)*C[6,5]*u[11] +
+           (A_A*D_A + A_N*D_N)*C[5,5]*sigmoid(u[9], vh_STN, k_STN, S_STN) -
+           A_G*D_G*C[2,5]*sigmoid(u[3], vh_GPe, k_GPe, S_GPe) -
+           2*(2*D_A+2*D_N-D_G)*u[10] - (2*D_A^2+2*D_N^2+D_G^2)*u[9];
+  du[11] = -u[11] + sqrt(σ2) * randn() + μ; #not sure if this is right for the cortical input
+end
+prob = ODEProblem(bg_model_no_delay,u0,tspan)
+sol = solve(prob)
+using Plots; plot(sol)
 
 function bg_model(t,u,h,du)
   du[1] = u[2];
@@ -62,38 +87,4 @@ tspan = (0.0,1000.0);
 prob = ConstantLagDDEProblem(bg_model,h,u0,lags,tspan);
 alg = MethodOfSteps(Tsit5());
 sol = solve(prob,alg);
-
 using Plots; plot(sol)
-
-# TODO write the function as an ode (I don't know how to do dde)
-#using ParameterizedFunctions
-#g = @ode_def LorenzExample begin
-#  dx = σ*(y-x)
-#  dy = x*(ρ-z) - y
-#  dz = x*y - β*z
-#end σ=>10.0 ρ=>28.0 β=(8/3)
-
-function bg_model_no_delay(t,u,du)
-  du[1] = u[2];
-  du[2] = (A_A*D_A + A_N*D_N)*C[5,1]*sigmoid(u[9], vh_STN, k_STN, S_STN) -
-          A_G*D_G*C[2,1]*sigmoid(u[3], vh_GPe, k_GPe, S_GPe) -
-          A_G*D_G*C[3,1]*sigmoid(u[5], vh_D1,  k_D1,  S_D1) -
-          2*(D_A+D_N-2*D_G)*u[2] - (D_A^2+D_N^2+2*D_G^2)*u[1];
-  du[3] = u[4];
-  du[4] = (A_A*D_A + A_N*D_N)*C[5,2]*sigmoid(u[9], vh_STN, k_STN, S_STN) -
-          A_G*D_G*C[4,2]*sigmoid(u[7], vh_D2,  k_D2,  S_D2) -
-          A_G*D_G*C[2,2]*sigmoid(u[3], vh_GPe, k_GPe, S_GPe) -
-          2*(D_A+D_N-2*D_G)*u[4] - (D_A^2+D_N^2+2*D_G^2)*u[3];
-  du[5] = u[6];
-  du[6] = (A_A*D_A + A_N*D_N)*C[6,3]*u[11] - 2*(D_A+D_N)*u[6] - (D_A^2+D_N^2)*u[5];
-  du[7] = u[8];
-  du[8] = (A_A*D_A + A_N*D_N)*C[6,4]*u[11] - 2*(D_A+D_N)*u[8] - (D_A^2+D_N^2)*u[7];
-  du[9] = u[10];
-  du[10] = (A_A*D_A + A_N*D_N)*C[6,5]*u[11] +
-           (A_A*D_A + A_N*D_N)*C[5,5]*sigmoid(u[9], vh_STN, k_STN, S_STN) -
-           A_G*D_G*C[2,5]*sigmoid(u[3], vh_GPe, k_GPe, S_GPe) -
-           2*(2*D_A+2*D_N-D_G)*u[10] - (2*D_A^2+2*D_N^2+D_G^2)*u[9];
-  du[11] = -u[11] + sqrt(σ2) * randn() + μ; #not sure if this is right for the cortical input
-end
-prob = ODEProblem(bg_model_no_delay,u0,tspan)
-sol = solve(prob)

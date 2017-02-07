@@ -1,3 +1,6 @@
+using Plots
+
+
 # spikes/s
 const S_D1 = 300.0; const S_D2 = 300.0; const S_GPe = 400.0; const S_GPi = 300.0; const S_STN = 500.0
 # mV^-1
@@ -14,7 +17,7 @@ const C =  [[   0.0    5   22    0   3    0  ]
             [    0     0    0    0   0   50  ]
             [    0     0    0    0   0   50  ]
             [    0    10    0    0   2    2  ]
-            [    0     0    0    0   0    0  ]]
+            [    0     0    0    0   0    0  ]]'
 # delays ms
 const τ_1 = 1.0; const τ_3 = 3.0; const τ_4 = 4.0
 # Cortical firing Hz
@@ -44,7 +47,7 @@ function bg_model(t,u,du)
            (A_A*D_A + A_N*D_N)*C[5,5]*sigmoid(u[9], vh_STN, k_STN, S_STN) -
            A_G*D_G*C[2,5]*sigmoid(u[3], vh_GPe, k_GPe, S_GPe) -
            2*(2*D_A+2*D_N-D_G)*u[10] - (2*D_A^2+2*D_N^2-D_G^2)*u[9]
-  du[11] = -u[11] + sqrt(σ2) * randn() + μ; #not sure if this is right for the cortical input
+  du[11] = 0;#-u[11] + sqrt(σ2) * randn() + μ; #not sure if this is right for the cortical input
   return du
 end
 
@@ -63,16 +66,18 @@ function fpp(DA, N, T)
 
   #the simulation
   neuron_superposition = zeros(Int(fs*T))
-  rates = zeros(5, Int(fs*T))
+  rates = zeros(6, Int(fs*T))
   U = zeros(11,1)
+  U[[1,3,5,7,9,11]]=[vh_GPe, vh_GPi, vh_D1, vh_D2, vh_STN, 0]
+  rates[:,1] = U[[1,3,5,7,9,11]]
   dU = zeros(11,1)
   refactory = zeros(N,1)
   neurons = zeros(N,1)
   for i = 2:Int(fs*T)
       #calculate BG rates
       dU = bg_model(i*dt,U,dU)
-      U += dU*(1000*dt)
-      rates[:,i] = U[[1,3,5,7,9]]
+      U += dU*dt
+      rates[:,i] = U[[1,3,5,7,9,11]]
       #Generate MER
       P  = dt * STN_max_v * sigmoid(rates[5,i], vh_STN, k_STN, S_STN)
       refactory = refactory - STN_max_v/fs
@@ -87,3 +92,6 @@ function fpp(DA, N, T)
   MER = MER - mean(MER)
   return MER, rates
 end
+
+MER, rates = fpp(1.0,1,1.0)
+plot(rates[6,:])

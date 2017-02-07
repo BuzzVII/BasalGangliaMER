@@ -22,7 +22,7 @@ const C =  [[   0.0    5   22    0   3    0  ]
             [    0     0    0    0   0   50  ]
             [    0     0    0    0   0   50  ]
             [    0    10    0    0   2    2  ]
-            [    0     0    0    0   0    0  ]];
+            [    0     0    0    0   0    0  ]]';
 
 # delays ms
 const τ_1 = 1.0; const τ_3 = 3.0; const τ_4 = 4.0;
@@ -57,7 +57,7 @@ function bg_model(t,u,du)
   du[11] = -u[11] + sqrt(σ2) * randn() + μ; #not sure if this is right for the cortical input
 end
 u0 = zeros(11);
-tspan = (0.0,100.0);
+tspan = (0.0,10.0);
 prob = ODEProblem(bg_model,u0,tspan)
 
 if delays
@@ -90,4 +90,3 @@ if delays
 end
 
 sol = solve(prob);
-using Plots; plot(sol)

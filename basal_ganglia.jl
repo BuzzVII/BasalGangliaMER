@@ -1,17 +1,16 @@
 using DifferentialEquations
 
-function bg_sim(v_e, delays, T, ξ)
-  #cortical - e, D1 - d1, D2 - d2, GPi - p1, GPe - p2, STN - Ϛ
-  # spikes/s
-  const S_p1 = 250.0; const S_p2 = 300.0; const S_d1 = 65.0; const S_d2 = 65.0; const S_Ϛ = 500.0
-  # mV^-1
-  const k_p1 = 0.2;const k_p2 = 0.2; const k_d1 = 0.3; const k_d2 = 0.3; const k_Ϛ = 0.2
-  # mV
-  const θ_p1 = 10.0; const θ_p2 = 9.0; const θ_d1 = 19.0; const θ_d2 = 19.0; const θ_Ϛ = 10.0
-  # decay and rise time constants of membrane s^-1
-  const α = 160.0; const β = 640.0
-  # dopamine factor
-  #const ξ = 5.0
+#cortical - e, D1 - d1, D2 - d2, GPi - p1, GPe - p2, STN - Ϛ
+# spikes/s
+const S_p1 = 250.0; const S_p2 = 300.0; const S_d1 = 65.0; const S_d2 = 65.0; const S_Ϛ = 500.0
+# mV^-1
+const k_p1 = 0.2;const k_p2 = 0.2; const k_d1 = 0.3; const k_d2 = 0.3; const k_Ϛ = 0.2
+# mV
+const θ_p1 = 10.0; const θ_p2 = 9.0; const θ_d1 = 19.0; const θ_d2 = 19.0; const θ_Ϛ = 10.0
+# decay and rise time constants of membrane s^-1
+const α = 160.0; const β = 640.0
+
+function basal_ganglia(v_e, delays, ξ)
   # mV s          p1     p2   d1    d2   Ϛ    e
   const ν =  [[    0  -0.03  -0.1   0   0.3   0  ]
               [    0   -0.1    0  -0.3  0.3   0  ]
@@ -61,11 +60,17 @@ function bg_sim(v_e, delays, T, ξ)
              (α*β)*ν[2,5]*(ζ(u[3], θ_p2, k_p2, S_p2) - τ[2,5]*u[4]*dζ(u[3], θ_p2, k_p2, S_p2))-
              (β + α)*u[10] - (α*β)*u[9]
   end
+  return bg_model, ζ
+end
+
+function bg_sim(v_e, delays, T, ξ)
+  bg_model, ζ = basal_ganglia(v_e, delays, ξ)
   u0 = zeros(10)
-  #u0[[1,3,5,7,9]]=[θ_p1, θ_p2, θ_d1, θ_d2, θ_Ϛ]
+  u0[[1,3,5,7,9]]=[θ_p1, θ_p2, θ_d1, θ_d2, θ_Ϛ]
   tspan = (0.0,T)
   prob = ODEProblem(bg_model,u0,tspan)
   alg = Tsit5()
   sol = solve(prob, alg)
   rates = [ζ(sol[:,1], θ_p1, k_p1, S_p1) ζ(sol[:,3], θ_p2, k_p2, S_p2) ζ(sol[:,5], θ_d1,  k_d1,  S_d1) ζ(sol[:,7], θ_d2,  k_d2,  S_d2) ζ(sol[:,9], θ_Ϛ, k_Ϛ, S_Ϛ)]
+  return rates, sol
 end

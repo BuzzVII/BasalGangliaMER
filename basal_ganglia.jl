@@ -9,15 +9,15 @@ const k_p1 = 0.2;const k_p2 = 0.2; const k_d1 = 0.3; const k_d2 = 0.3; const k_�
 const θ_p1 = 10.0; const θ_p2 = 9.0; const θ_d1 = 19.0; const θ_d2 = 19.0; const θ_Ϛ = 10.0
 # decay and rise time constants of membrane s^-1
 const α = 160.0; const β = 640.0
+# mV s          p1     p2   d1    d2   Ϛ    e
+const ν =  [[    0  -0.03  -0.1   0   0.3   0  ]
+            [    0   -0.1    0  -0.3  0.3   0  ]
+            [    0     0     0    0    0   1.0/ξ ]
+            [    0     0     0    0    0   0.7*ξ ]
+            [    0  -0.04    0    0    0   0.1 ]
+            [    0     0     0    0    0    0  ]]'
 
 function basal_ganglia(v_e, delays, ξ)
-  # mV s          p1     p2   d1    d2   Ϛ    e
-  const ν =  [[    0  -0.03  -0.1   0   0.3   0  ]
-              [    0   -0.1    0  -0.3  0.3   0  ]
-              [    0     0     0    0    0   1.0/ξ ]
-              [    0     0     0    0    0   0.7*ξ ]
-              [    0  -0.04    0    0    0   0.1 ]
-              [    0     0     0    0    0    0  ]]'
   # delays s
   if delays
     τ = zeros(6,6)

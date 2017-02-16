@@ -61,7 +61,8 @@ function basal_ganglia(v_e, delays, ξ)
              (β + α)*u[10] - (α*β)*u[9]
   end
 
-  function bg_model_first_order(t,u,du)
+  function bg_model_(t,u,du,h)
+    #First order approximation for delays
     du[1] = u[2]
     du[2] = (α*β)*ν[5,1]*(ζ(u[9], θ_Ϛ, k_Ϛ, S_Ϛ) - τ[5,1]*u[10]*dζ(u[9], θ_Ϛ, k_Ϛ, S_Ϛ)) +
             (α*β)*ν[2,1]*(ζ(u[3], θ_p2, k_p2, S_p2) - τ[2,1]*u[4]*dζ(u[3], θ_p2, k_p2, S_p2)) +
@@ -82,7 +83,8 @@ function basal_ganglia(v_e, delays, ξ)
              (β + α)*u[10] - (α*β)*u[9]
   end
 
-  function bg_model_second_order(t,u,du)
+  #TODO make the 2nd order approximation for delays
+  function bg_model__(t,u,du)
     du[1] = u[2]
     du[2] = (α*β)*ν[5,1]*(ζ(u[9], θ_Ϛ, k_Ϛ, S_Ϛ) - τ[5,1]*u[10]*dζ(u[9], θ_Ϛ, k_Ϛ, S_Ϛ)) +
             (α*β)*ν[2,1]*(ζ(u[3], θ_p2, k_p2, S_p2) - τ[2,1]*u[4]*dζ(u[3], θ_p2, k_p2, S_p2)) +

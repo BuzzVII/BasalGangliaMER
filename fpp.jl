@@ -10,20 +10,20 @@ function h(t, rate, dt, j)
 end
 
 #BG parameters
-ve(t) = 14.0 - 4.0*sin(2*30.0*pi*t)
+ve(t) = 14.0 - 7*sin(2*20.0*pi*t)
 delays = true
 
 #simulation paramters
 ξ = 1.0
-N = 10000
-T = 1.0
+N = 1
+T = 60.0
 fs = 24000.0
 dt = 1/fs
 STN_max_v = 500.0
 N_max = floor(Int,fs*T)
 
 include("basal_ganglia.jl")
-bg_model, ζ, dζ = basal_ganglia(ve, delays, ξ)
+bg_model = basal_ganglia(ve, delays)
 
 #Neuron parameters
 It = squeeze(readcsv("apcurrent24k.dat"),1)
@@ -66,6 +66,6 @@ for i = 2:(N_max - 1)
     refactory = refactory + neurons
     neuron_superposition[i] = (scale * neurons)[1]
 end
-MER = conv(neuron_superposition, It)
-MER = MER + 0.001*randn(size(MER))
-MER = MER - mean(MER)
+#MER = conv(neuron_superposition, It)
+#MER = MER + 0.001*randn(size(MER))
+#MER = MER - mean(MER)

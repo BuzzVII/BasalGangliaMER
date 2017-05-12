@@ -9,6 +9,7 @@ const k_p1 = 0.2;const k_p2 = 0.2; const k_d1 = 0.3; const k_d2 = 0.3; const k_�
 const θ_p1 = 10.0; const θ_p2 = 9.0; const θ_d1 = 19.0; const θ_d2 = 19.0; const θ_Ϛ = 10.0
 # decay and rise time constants of membrane s^-1
 const α = 160.0; const β = 640.0
+#const ξ = 1.0;
 # mV s          p1     p2   d1    d2   Ϛ    e
 const ν =  [[    0  -0.03  -0.1   0   0.3   0  ]
             [    0   -0.1    0  -0.3  0.3   0  ]
@@ -17,7 +18,15 @@ const ν =  [[    0  -0.03  -0.1   0   0.3   0  ]
             [    0  -0.04    0    0    0   0.1 ]
             [    0     0     0    0    0    0  ]]'
 
-function basal_ganglia(v_e, delays, ξ)
+function ζ(v, θ, k, S_max)
+  S = S_max./(1+exp(k*(θ - v)))
+end
+
+function dζ(v, θ, k, S_max)
+  S = S_max*k*exp(k*(θ - v))./(1+exp(k*(θ - v))).^2
+end
+
+function basal_ganglia(v_e, delays)
   # delays s
   if delays
     τ = zeros(6,6)
@@ -31,14 +40,6 @@ function basal_ganglia(v_e, delays, ξ)
   end
   # Cortical firing Hz
   #const μ = 14.0; const σ2 = 1.0
-
-  function ζ(v, θ, k, S_max)
-    S = S_max./(1+exp(k*(θ - v)))
-  end
-
-  function dζ(v, θ, k, S_max)
-    S = S_max*k*exp(k*(θ - v))./(1+exp(k*(θ - v))).^2
-  end
 
   function bg_model(t,u,du,h)
     du[1] = u[2]
@@ -83,13 +84,11 @@ function basal_ganglia(v_e, delays, ξ)
              (β + α)*u[10] - (α*β)*u[9]
   end
 
-  return bg_model, ζ, dζ
+  return bg_model
 end
 
-function bg_sim(v_e, delays, T, ξ)
-  bg_model, ζ = basal_ganglia(v_e, delays, ξ)
-  u0 = zeros(10)
-  u0[[1,3,5,7,9]]=[θ_p1, θ_p2, θ_d1, θ_d2, θ_Ϛ]
+function bg_sim(v_e, delays, u0, T)
+  bg_model = basal_ganglia(v_e, delays)
   tspan = (0.0,T)
   prob = ODEProblem(bg_model,u0,tspan)
   alg = Tsit5()
